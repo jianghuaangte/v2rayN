@@ -1,70 +1,51 @@
 <#
 .SYNOPSIS
-    Download v2rayN from GitHub, extract it, and create a desktop shortcut.
-.DESCRIPTION
-    This script downloads v2rayN, extracts the ZIP file to the current directory,
-    and creates a desktop shortcut for v2rayN.exe.
-.NOTES
-    File Name      : Install-v2rayN.ps1
-    Prerequisite   : PowerShell 5.1 or later
+    Download and install v2rayN with desktop shortcut
 #>
 
-# 1. 定义下载参数
-$downloadUrl = "https://ghfast.top/https://github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
-$zipFileName = "v2rayN-windows-64-SelfContained.zip"
-$desktopShortcutName = "v2rayN.lnk"
+# 1. 设置下载参数
+$url = "https://ghfast.top/https://github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
+$zipFile = "$env:TEMP\v2rayN.zip"
+$destDir = "$PSScriptRoot\v2rayN"
+$shortcutPath = "$env:USERPROFILE\Desktop\v2rayN.lnk"
 
-# 2. 检查当前目录是否可写
-if (-not (Test-Path -Path . -PathType Container)) {
-    Write-Host "错误：当前目录不可写！" -ForegroundColor Red
+# 2. 创建目标目录
+if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force }
+
+# 3. 下载ZIP文件
+try {
+    Write-Host "Downloading v2rayN..."
+    Invoke-WebRequest -Uri $url -OutFile $zipFile -UseBasicParsing
+}
+catch {
+    Write-Host "Download failed: $_" -ForegroundColor Red
     exit 1
 }
 
-# 3. 下载 ZIP 文件
+# 4. 解压文件
 try {
-    Write-Host "正在下载 v2rayN..."
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $zipFileName -UseBasicParsing
-    Write-Host "下载完成！" -ForegroundColor Green
+    Write-Host "Extracting files..."
+    Expand-Archive -Path $zipFile -DestinationPath $destDir -Force
 }
 catch {
-    Write-Host "下载失败: $_" -ForegroundColor Red
-    exit 1
-}
-
-# 4. 解压 ZIP 文件
-try {
-    Write-Host "正在解压..."
-    Expand-Archive -Path $zipFileName -DestinationPath . -Force
-    Write-Host "解压完成！" -ForegroundColor Green
-}
-catch {
-    Write-Host "解压失败: $_" -ForegroundColor Red
+    Write-Host "Extraction failed: $_" -ForegroundColor Red
     exit 1
 }
 
 # 5. 创建桌面快捷方式
 try {
-    $v2rayNPath = Resolve-Path -Path ".\v2rayN\v2rayN.exe"
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    $shortcutPath = Join-Path -Path $desktopPath -ChildPath $desktopShortcutName
-
-    $WScriptShell = New-Object -ComObject WScript.Shell
-    $shortcut = $WScriptShell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $v2rayNPath
-    $shortcut.WorkingDirectory = Split-Path -Path $v2rayNPath -Parent
+    $exePath = Join-Path $destDir "v2rayN.exe"
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = $exePath
+    $shortcut.WorkingDirectory = $destDir
     $shortcut.Save()
-
-    Write-Host "已在桌面创建快捷方式: $shortcutPath" -ForegroundColor Green
+    Write-Host "Shortcut created: $shortcutPath" -ForegroundColor Green
 }
 catch {
-    Write-Host "创建快捷方式失败: $_" -ForegroundColor Red
+    Write-Host "Shortcut creation failed: $_" -ForegroundColor Yellow
 }
 
-# 6. 清理 ZIP 文件（可选）
-try {
-    Remove-Item -Path $zipFileName -Force -ErrorAction SilentlyContinue
-    Write-Host "安装完成！" -ForegroundColor Green
-}
-catch {
-    Write-Host "清理临时文件失败: $_" -ForegroundColor Yellow
-}
+# 6. 清理临时文件
+Remove-Item $zipFile -ErrorAction SilentlyContinue
+Write-Host "Installation completed!" -ForegroundColor Green
