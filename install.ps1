@@ -10,12 +10,12 @@
 #>
 
 # 1. 定义下载参数
-$downloadUrl = "https://ghproxy.net/https://github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
+$downloadUrl = "https://ghfast.top/https://github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
 $zipFileName = "v2rayN-windows-64-SelfContained.zip"
 $desktopShortcutName = "v2rayN.lnk"
 
 # 2. 检查当前目录是否可写
-if (-not (Test-Path -Path . -PathType Container -IsValid)) {
+if (-not (Test-Path -Path . -PathType Container)) {
     Write-Host "错误：当前目录不可写！" -ForegroundColor Red
     exit 1
 }
@@ -25,7 +25,8 @@ try {
     Write-Host "正在下载 v2rayN..."
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zipFileName -UseBasicParsing
     Write-Host "下载完成！" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "下载失败: $_" -ForegroundColor Red
     exit 1
 }
@@ -35,7 +36,8 @@ try {
     Write-Host "正在解压..."
     Expand-Archive -Path $zipFileName -DestinationPath . -Force
     Write-Host "解压完成！" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "解压失败: $_" -ForegroundColor Red
     exit 1
 }
@@ -53,10 +55,16 @@ try {
     $shortcut.Save()
 
     Write-Host "已在桌面创建快捷方式: $shortcutPath" -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "创建快捷方式失败: $_" -ForegroundColor Red
 }
 
 # 6. 清理 ZIP 文件（可选）
-Remove-Item -Path $zipFileName -Force
-Write-Host "安装完成！" -ForegroundColor Green
+try {
+    Remove-Item -Path $zipFileName -Force -ErrorAction SilentlyContinue
+    Write-Host "安装完成！" -ForegroundColor Green
+}
+catch {
+    Write-Host "清理临时文件失败: $_" -ForegroundColor Yellow
+}
