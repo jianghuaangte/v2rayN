@@ -29,7 +29,7 @@ Write-Host "Downloading v2rayN..."
 try {
     Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip -UseBasicParsing
 } catch {
-    Write-Host "❌ Failed to download v2rayN. Please check your network or proxy settings."
+    Write-Host "Failed to download v2rayN. Please check your network or proxy settings."
     exit 1
 }
 
@@ -43,7 +43,7 @@ Expand-Archive -Path $tempZip -DestinationPath $installPath -Force
 $v2rayExe = Get-ChildItem -Path $installPath -Recurse -Filter "v2rayN.exe" -File | Select-Object -First 1
 
 if (-not $v2rayExe) {
-    Write-Host "❌ Cannot find v2rayN.exe in the extracted folder."
+    Write-Host "Cannot find v2rayN.exe in the extracted folder."
     exit 1
 }
 
@@ -57,7 +57,7 @@ $shortcut.Description = "v2rayN shortcut"
 $shortcut.Save()
 
 Write-Host ""
-Write-Host "✅ Installation complete!"
+Write-Host "Installation complete!"
 Write-Host ""
 Write-Host "A shortcut to v2rayN has been created on your desktop."
 Write-Host ""
