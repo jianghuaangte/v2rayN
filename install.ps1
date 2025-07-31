@@ -2,9 +2,9 @@ param(
     [switch]$AllUsers
 )
 
-$installPath = "C:\Program Files\usr\local\bin"
+$installPath = "C:\Program Files"
 $exeName = "v2rayN.exe"
-$zipUrl = "https://hk.gh-proxy.com/github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
+$zipUrl = "https://gitcode.com/freedom3z/kexue/releases/download/v1.0/kexue.zip"
 $zipFile = "$env:TEMP\v2rayN.zip"
 
 Write-Host "Downloading v2rayN..."
