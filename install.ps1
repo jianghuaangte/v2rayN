@@ -1,63 +1,43 @@
-param(
-    [switch]$AllUsers
-)
+# 设置控制台输出编码为 UTF-8，防止中文乱码
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
+# 设置变量
 $downloadUrl = "https://hk.gh-proxy.com/github.com/2dust/v2rayN/releases/download/7.13.2/v2rayN-windows-64-SelfContained.zip"
-$zipName = "v2rayN.zip"
+$zipFile = "$env:TEMP\v2rayN.zip"
+$installDir = "C:\Program Files\usr\local\bin"
+$exeName = "v2rayN.exe"
+$desktopShortcut = "$([Environment]::GetFolderPath("Desktop"))\v2rayN.lnk"
 
-function Get-DesktopPath {
-    if ($AllUsers) {
-        return "$Env:PUBLIC\Desktop"
-    } else {
-        return [Environment]::GetFolderPath('Desktop')
-    }
+Write-Host "🚀 开始安装 v2rayN ..." -ForegroundColor Cyan
+
+# 创建安装目录（如果不存在）
+if (!(Test-Path -Path $installDir)) {
+    Write-Host "📁 创建安装目录: $installDir"
+    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 }
 
-function Get-InstallPath {
-    if ($AllUsers) {
-        return "C:\Program Files\v2rayN"
-    } else {
-        return "$env:LOCALAPPDATA\v2rayN"
-    }
-}
+# 下载压缩包
+Write-Host "🌐 正在下载 v2rayN..." -NoNewline
+Invoke-WebRequest -Uri $downloadUrl -OutFile $zipFile
+Write-Host " ✅"
 
-$desktop = Get-DesktopPath
-$installPath = Get-InstallPath
-$tempZip = Join-Path $env:TEMP $zipName
+# 解压 ZIP 到目标目录
+Write-Host "📦 正在解压到: $installDir"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installDir)
 
-Write-Host "Downloading v2rayN..."
-try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $tempZip -UseBasicParsing
-} catch {
-    Write-Host "Failed to download v2rayN. Please check your network or proxy settings."
-    exit 1
-}
+# 删除 ZIP 文件
+Remove-Item $zipFile
 
-Write-Host "Extracting v2rayN to $installPath..."
-if (!(Test-Path $installPath)) {
-    New-Item -Path $installPath -ItemType Directory -Force | Out-Null
-}
-Expand-Archive -Path $tempZip -DestinationPath $installPath -Force
+# 创建快捷方式
+Write-Host "🔗 正在创建桌面快捷方式..."
+$WScriptShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WScriptShell.CreateShortcut($desktopShortcut)
+$Shortcut.TargetPath = Join-Path $installDir $exeName
+$Shortcut.WorkingDirectory = $installDir
+$Shortcut.WindowStyle = 1
+$Shortcut.Description = "v2rayN 快捷方式"
+$Shortcut.Save()
 
-# Locate v2rayN.exe
-$v2rayExe = Get-ChildItem -Path $installPath -Recurse -Filter "v2rayN.exe" -File | Select-Object -First 1
-
-if (-not $v2rayExe) {
-    Write-Host "Cannot find v2rayN.exe in the extracted folder."
-    exit 1
-}
-
-$shortcutPath = Join-Path $desktop "v2rayN.lnk"
-$wshShell = New-Object -ComObject WScript.Shell
-$shortcut = $wshShell.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = $v2rayExe.FullName
-$shortcut.WorkingDirectory = Split-Path $v2rayExe.FullName
-$shortcut.WindowStyle = 1
-$shortcut.Description = "v2rayN shortcut"
-$shortcut.Save()
-
-Write-Host ""
-Write-Host "Installation complete!"
-Write-Host ""
-Write-Host "A shortcut to v2rayN has been created on your desktop."
-Write-Host ""
+Write-Host "`n✅ v2rayN 安装完成，快捷方式已创建在桌面。" -ForegroundColor Green
