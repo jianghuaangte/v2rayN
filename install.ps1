@@ -23,7 +23,16 @@ if (!(Test-Path -Path $installPath)) {
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installPath, $true)
+
+try {
+    # 如果支持 UTF8 解压
+    $encoding = [System.Text.Encoding]::UTF8
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installPath, $encoding)
+} catch {
+    # 回退到兼容方式
+    Write-Warning "UTF8 解压失败，尝试默认方式"
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installPath)
+}
 
 Remove-Item $zipFile
 
@@ -31,15 +40,19 @@ Remove-Item $zipFile
 $shortcutPath = "$([Environment]::GetFolderPath("Desktop"))\v2rayN.lnk"
 $exePath = Join-Path $installPath $exeName
 
-$WshShell = New-Object -ComObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut($shortcutPath)
-$Shortcut.TargetPath = $exePath
-$Shortcut.WorkingDirectory = $installPath
-$Shortcut.Description = "v2rayN"
-$Shortcut.Save()
+if (Test-Path $exePath) {
+    $WshShell = New-Object -ComObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut($shortcutPath)
+    $Shortcut.TargetPath = $exePath
+    $Shortcut.WorkingDirectory = $installPath
+    $Shortcut.Description = "v2rayN"
+    $Shortcut.Save()
 
-Write-Host @'
+    Write-Host @'
 Done!
 
 You can launch v2rayN from the desktop shortcut.
 '@
+} else {
+    Write-Warning "v2rayN.exe 未找到，可能解压失败或路径不正确。"
+}
