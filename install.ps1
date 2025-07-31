@@ -2,57 +2,73 @@ param(
     [switch]$AllUsers
 )
 
-$installPath = "C:\Program Files"
-$exeName = "v2rayN.exe"
-$zipUrl = "https://gitcode.com/freedom3z/kexue/releases/download/v1.0/kexue.zip"
-$zipFile = "$env:TEMP\v2rayN.zip"
+$installInstructions = @'
+Hey friend
 
-Write-Host "Downloading v2rayN..."
+This installer is only available for Windows.
+Please manually install on other systems.
+'@
+
+if ($IsMacOS -or $IsLinux) {
+    Write-Host $installInstructions
+    exit
+}
+
+# 检查是否管理员权限（安装到 C:\Program Files 通常需要）
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "Please run this script as Administrator."
+    exit
+}
+
+$zipUrl = "https://gitcode.com/freedom3z/kexue/releases/download/v1.0/kexue.zip"
+$installDir = "C:\Program Files\kexue"
+$zipFile = Join-Path $env:TEMP "kexue.zip"
+
+Write-Host "Downloading package from $zipUrl..."
 
 try {
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
 } catch {
-    Write-Host "Failed to download v2rayN. Please check your internet connection."
-    exit 1
+    Write-Host "Failed to download the package. Please check your internet connection."
+    exit
 }
 
-Write-Host "Extracting to $installPath..."
+# 解压
+Write-Host "Extracting to $installDir..."
+if (Test-Path $installDir) {
+    Remove-Item -Recurse -Force $installDir
+}
+Expand-Archive -LiteralPath $zipFile -DestinationPath $installDir
 
-if (!(Test-Path -Path $installPath)) {
-    New-Item -ItemType Directory -Path $installPath -Force | Out-Null
+# 查找 v2rayN.exe
+Write-Host "Searching for v2rayN.exe..."
+$v2rayExe = Get-ChildItem -Path $installDir -Filter "v2rayN.exe" -Recurse -File | Select-Object -First 1
+
+if (-not $v2rayExe) {
+    Write-Host "v2rayN.exe not found after extraction."
+    exit
 }
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-
-try {
-    # 如果支持 UTF8 解压
-    $encoding = [System.Text.Encoding]::UTF8
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installPath, $encoding)
-} catch {
-    # 回退到兼容方式
-    Write-Warning "UTF8 解压失败，尝试默认方式"
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFile, $installPath)
+# 创建快捷方式到桌面
+$WshShell = New-Object -ComObject WScript.Shell
+$desktop = if ($AllUsers) {
+    [Environment]::GetFolderPath("CommonDesktopDirectory")
+} else {
+    [Environment]::GetFolderPath("Desktop")
 }
+$linkPath = Join-Path $desktop "v2rayN.lnk"
 
-Remove-Item $zipFile
+Write-Host "Creating shortcut on desktop..."
+$shortcut = $WshShell.CreateShortcut($linkPath)
+$shortcut.TargetPath = $v2rayExe.FullName
+$shortcut.WorkingDirectory = Split-Path $v2rayExe.FullName
+$shortcut.WindowStyle = 1
+$shortcut.Description = "v2rayN"
+$shortcut.Save()
 
-# Create desktop shortcut
-$shortcutPath = "$([Environment]::GetFolderPath("Desktop"))\v2rayN.lnk"
-$exePath = Join-Path $installPath $exeName
-
-if (Test-Path $exePath) {
-    $WshShell = New-Object -ComObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-    $Shortcut.TargetPath = $exePath
-    $Shortcut.WorkingDirectory = $installPath
-    $Shortcut.Description = "v2rayN"
-    $Shortcut.Save()
-
-    Write-Host @'
+Write-Host @'
 Done!
 
-You can launch v2rayN from the desktop shortcut.
+You can now launch v2rayN from the desktop shortcut.
 '@
-} else {
-    Write-Warning "v2rayN.exe 未找到，可能解压失败或路径不正确。"
-}
