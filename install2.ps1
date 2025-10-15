@@ -111,9 +111,11 @@ IconFile=$TargetPath
         # 方法3：使用 VBScript 创建快捷方式
         try {
             $vbsFile = Join-Path $env:TEMP "CreateShortcut.vbs"
+            $desktopType = if ($AllUsers) { "AllUsersDesktop" } else { "Desktop" }
+            
             $vbsContent = @"
 Set WshShell = CreateObject("WScript.Shell")
-strDesktop = WshShell.SpecialFolders("$(&{if($AllUsers){"AllUsersDesktop"}else{"Desktop"}})")
+strDesktop = WshShell.SpecialFolders("$desktopType")
 Set oShellLink = WshShell.CreateShortcut(strDesktop & "\$ShortcutName.lnk")
 oShellLink.TargetPath = "$TargetPath"
 oShellLink.WorkingDirectory = "$(Split-Path $TargetPath)"
@@ -133,30 +135,8 @@ oShellLink.Save
             Write-Host "VBScript method failed: $($_.Exception.Message)" -ForegroundColor Red
         }
         
-        # 方法4：使用 PowerShell 直接创建 .lnk 文件（最终备用）
-        try {
-            # 创建简单的 .lnk 文件内容（二进制格式简化版）
-            $lnkHeader = @(
-                0x4C, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x46
-            )
-            
-            # 将目标路径转换为字节数组
-            $targetBytes = [System.Text.Encoding]::Unicode.GetBytes($TargetPath + "`0")
-            $workingDirBytes = [System.Text.Encoding]::Unicode.GetBytes((Split-Path $TargetPath) + "`0")
-            
-            # 组合所有字节
-            $allBytes = $lnkHeader + $targetBytes + $workingDirBytes
-            
-            # 写入文件
-            [System.IO.File]::WriteAllBytes($linkPath, [byte[]]$allBytes)
-            Write-Host "✓ Raw LNK file created" -ForegroundColor Green
-            return $true
-        }
-        catch {
-            Write-Host "All shortcut methods failed." -ForegroundColor Red
-            return $false
-        }
+        Write-Host "All shortcut methods failed." -ForegroundColor Red
+        return $false
     }
     catch {
         Write-Host "Shortcut creation error: $($_.Exception.Message)" -ForegroundColor Red
@@ -175,6 +155,7 @@ You can now launch v2rayN from the desktop shortcut.
 '@
 } else {
     Write-Host "Shortcut creation failed, but v2rayN is installed at: $($v2rayExe.FullName)" -ForegroundColor Yellow
+    Write-Host "You can manually create a shortcut or run v2rayN directly from the installation directory." -ForegroundColor Yellow
 }
 
 # 可选：清理临时文件
